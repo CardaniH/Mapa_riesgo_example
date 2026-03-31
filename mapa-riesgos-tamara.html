@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Riesgos Támara</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --brand: #8A191C;
+            --brand-dark: #5e1012;
+            --brand-light: #fff1f2;
+            --brand-subtle: rgba(138,25,28,0.08);
+            --text: #1a1a1a;
+            --text-muted: #6b7280;
+            --text-faint: #9ca3af;
+            --surface: #ffffff;
+            --surface-2: #f9fafb;
+            --surface-3: #f3f4f6;
+            --border: rgba(0,0,0,0.08);
+            --radius: 10px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+            --font: 'Inter', system-ui, sans-serif;
+            --risk-critical: #dc2626;
+            --risk-high: #ea580c;
+            --risk-medium: #ca8a04;
+            --risk-low: #16a34a;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--surface-2);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        /* CARD WRAPPER */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        /* HEADER */
+        .header {
+            background: var(--brand);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .header-title {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .header-sub {
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+        .header-badge {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        /* BODY LAYOUT */
+        .body {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 0;
+        }
+        @media (max-width: 640px) {
+            .body { grid-template-columns: 1fr; }
+        }
+
+        /* CHART SECTION */
+        .chart-section {
+            padding: 20px 16px 20px 20px;
+            border-right: 1px solid var(--border);
+        }
+
+        .chart-wrap {
+            display: flex;
+            gap: 8px;
+        }
+        .y-axis {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            gap: 0;
+        }
+        .y-axis-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--brand);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+        .y-ticks {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 340px;
+            align-items: flex-end;
+            padding: 0;
+        }
+        .tick {
+            font-size: 9px;
+            color: var(--text-faint);
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        .matrix-container {
+            flex: 1;
+        }
+
+        /* MATRIX */
+        .matrix {
+            position: relative;
+            height: 340px;
+            background: linear-gradient(to top right, #fff1f2 0%, #ffffff 100%);
+            border-left: 2px solid var(--brand);
+            border-bottom: 2px solid var(--brand);
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Zone backgrounds */
+        .zone {
+            position: absolute;
+            border-radius: 2px;
+        }
+        .zone-critical { background: rgba(220,38,38,0.06); }
+        .zone-high     { background: rgba(234,88,12,0.05); }
+        .zone-medium   { background: rgba(202,138,4,0.04); }
+        .zone-safe     { background: rgba(22,163,74,0.04); }
+
+        /* Grid lines */
+        .grid-h, .grid-v {
+            position: absolute;
+            background: rgba(138,25,28,0.07);
+        }
+        .grid-h { width: 100%; height: 1px; }
+        .grid-v { height: 100%; width: 1px; }
+
+        /* Risk nodes */
+        .node {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            transform: translate(-50%, 50%);
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            z-index: 10;
+        }
+        .node:hover {
+            transform: translate(-50%, 50%) scale(1.25);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            z-index: 20;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: var(--text);
+        }
+        .node:hover .tooltip { display: block; }
+
+        /* X-axis */
+        .x-axis {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            padding-left: 2px;
+        }
+        .x-ticks {
+            display: flex;
+            justify-content: space-around;
+            flex: 1;
+        }
+        .x-axis-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--brand);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            padding: 16px;
+            background: var(--surface-2);
+        }
+        .sidebar-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .risk-list { display: flex; flex-direction: column; gap: 6px; }
+
+        .risk-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 11px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: box-shadow 0.15s;
+            cursor: default;
+        }
+        .risk-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .risk-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .risk-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.3;
+        }
+        .risk-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+        }
+        .risk-area {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .risk-score {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 4px;
+            color: #fff;
+        }
+
+        /* FOOTER */
+        .footer {
+            background: var(--surface-3);
+            border-top: 1px solid var(--border);
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .footer-text {
+            font-size: 10px;
+            color: var(--text-faint);
+        }
+        .footer-stats {
+            display: flex;
+            gap: 16px;
+        }
+        .stat { text-align: center; }
+        .stat-val {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--brand);
+        }
+        .stat-lbl {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <div class="header-title">Mapa de Riesgos Institucional — Támara</div>
+                <div class="header-sub">Visualización Probabilidad × Impacto</div>
+            </div>
+            <div class="header-badge" id="update-date"></div>
+        </div>
+
+        <!-- BODY -->
+        <div class="body">
+            <!-- CHART -->
+            <div class="chart-section">
+                <div class="chart-wrap">
+                    <!-- Y axis ticks -->
+                    <div class="y-axis">
+                        <div class="y-axis-label">Probabilidad</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; width:28px; justify-content:space-between; height:340px; padding-bottom:0; align-items:flex-end; padding-right:4px;">
+                        <span class="tick">5</span>
+                        <span class="tick">4</span>
+                        <span class="tick">3</span>
+                        <span class="tick">2</span>
+                        <span class="tick">1</span>
+                    </div>
+                    <div class="matrix-container">
+                        <div class="matrix" id="matrix">
+                            <!-- Zone colors -->
+                            <div class="zone zone-critical" style="right:0;top:0;width:40%;height:40%;"></div>
+                            <div class="zone zone-high" style="right:0;top:40%;width:40%;height:20%;"></div>
+                            <div class="zone zone-high" style="right:40%;top:0;width:20%;height:40%;"></div>
+                            <div class="zone zone-medium" style="left:0;top:0;width:40%;height:60%;"></div>
+                            <div class="zone zone-safe" style="left:0;bottom:0;width:100%;height:20%;"></div>
+
+                            <!-- Grid lines horizontal -->
+                            <div class="grid-h" style="top:20%;"></div>
+                            <div class="grid-h" style="top:40%;"></div>
+                            <div class="grid-h" style="top:60%;"></div>
+                            <div class="grid-h" style="top:80%;"></div>
+                            <!-- Grid lines vertical -->
+                            <div class="grid-v" style="left:20%;"></div>
+                            <div class="grid-v" style="left:40%;"></div>
+                            <div class="grid-v" style="left:60%;"></div>
+                            <div class="grid-v" style="left:80%;"></div>
+
+                            <!-- Nodes rendered by JS -->
+                            <div id="nodes"></div>
+                        </div>
+
+                        <!-- X axis ticks -->
+                        <div style="display:flex; justify-content:space-around; margin-top:4px; padding:0 2px;">
+                            <span class="tick">1</span>
+                            <span class="tick">2</span>
+                            <span class="tick">3</span>
+                            <span class="tick">4</span>
+                            <span class="tick">5</span>
+                        </div>
+                        <div class="x-axis-label">Impacto / Severidad</div>
+
+                        <!-- Legend -->
+                        <div class="legend">
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--risk-critical)"></div> Crítico</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--risk-high)"></div> Alto</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--risk-medium)"></div> Medio</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--risk-low)"></div> Bajo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+                <div class="sidebar-title">Riesgos Detectados</div>
+                <div class="risk-list" id="risk-list"></div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <div class="footer-text">Támara Imágenes Diagnósticas · Gestión de Riesgos</div>
+            <div class="footer-stats">
+                <div class="stat">
+                    <div class="stat-val" id="stat-total">0</div>
+                    <div class="stat-lbl">Riesgos</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-val" id="stat-critical">0</div>
+                    <div class="stat-lbl">Críticos</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-val" id="stat-high">0</div>
+                    <div class="stat-lbl">Altos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── DATA ───────────────────────────────────────────────────────────
+        const risks = [
+            { id: 1, nombre: 'Falla Equipos Biomédicos', p: 4, i: 5, area: 'Imágenes' },
+            { id: 2, nombre: 'Error en Informe Médico',  p: 2, i: 5, area: 'Médica' },
+            { id: 3, nombre: 'Desabastecimiento Insumos',p: 3, i: 3, area: 'Logística' },
+            { id: 4, nombre: 'Caída de Sistemas TIC',    p: 2, i: 4, area: 'TIC' },
+            { id: 5, nombre: 'Seguridad del Paciente',   p: 1, i: 5, area: 'Asistencial' },
+        ];
+
+        // ─── HELPERS ────────────────────────────────────────────────────────
+        function getLevel(score) {
+            if (score >= 16) return { label: 'Crítico', color: '#dc2626' };
+            if (score >= 9)  return { label: 'Alto',    color: '#ea580c' };
+            if (score >= 4)  return { label: 'Medio',   color: '#ca8a04' };
+            return             { label: 'Bajo',     color: '#16a34a' };
+        }
+
+        // ─── DATE ───────────────────────────────────────────────────────────
+        const now = new Date();
+        document.getElementById('update-date').textContent =
+            'Actualizado: ' + now.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+
+        // ─── RENDER ─────────────────────────────────────────────────────────
+        const nodesEl = document.getElementById('nodes');
+        const listEl  = document.getElementById('risk-list');
+        let critCount = 0, highCount = 0;
+
+        risks.forEach(r => {
+            const score = r.p * r.i;
+            const lvl = getLevel(score);
+            if (lvl.label === 'Crítico') critCount++;
+            if (lvl.label === 'Alto')    highCount++;
+
+            // Node on matrix
+            const node = document.createElement('div');
+            node.className = 'node';
+            node.style.cssText = `
+                background:${lvl.color};
+                left:${((r.i - 0.5) / 5) * 100}%;
+                bottom:${((r.p - 0.5) / 5) * 100}%;
+            `;
+            node.innerHTML = `${r.id}<div class="tooltip">${r.nombre} (${r.p}×${r.i}=${score})</div>`;
+            nodesEl.appendChild(node);
+
+            // List item
+            const item = document.createElement('div');
+            item.className = 'risk-item';
+            item.innerHTML = `
+                <div class="risk-badge" style="background:${lvl.color}">${r.id}</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="risk-name">${r.nombre}</div>
+                    <div class="risk-meta">
+                        <span class="risk-area">${r.area}</span>
+                        <span class="risk-score" style="background:${lvl.color}">${lvl.label}</span>
+                    </div>
+                </div>
+            `;
+            listEl.appendChild(item);
+        });
+
+        document.getElementById('stat-total').textContent    = risks.length;
+        document.getElementById('stat-critical').textContent = critCount;
+        document.getElementById('stat-high').textContent     = highCount;
+    </script>
+</body>
+</html>
